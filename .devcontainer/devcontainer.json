@@ -5,32 +5,34 @@
   "workspaceFolder": "/workspace",
   "remoteUser": "ubuntu",
   "shutdownAction": "stopCompose",
-  "overrideCommand": true,
+  "updateRemoteUserUID": true,
+
+  "remoteEnv": {
+    "CODEX_HOME": "/home/ubuntu/.codex-local",
+    "LANG": "C.UTF-8",
+    "LC_ALL": "C.UTF-8",
+    "LC_TIME": "C.UTF-8",
+    "TZ": "UTC"
+  },
+
+  "postCreateCommand": "rustc --version && cargo --version && node --version && npm --version && npx --version && pkg-config --libs --cflags libcap && echo CODEX_HOME=$CODEX_HOME",
+
   "customizations": {
     "vscode": {
       "settings": {
         "terminal.integrated.defaultProfile.linux": "bash",
-        "terminal.integrated.env.linux": {
-          "PATH": "/home/ubuntu/.cargo/bin:${env:PATH}"
+        "terminal.integrated.profiles.linux": {
+          "bash": {
+            "path": "/bin/bash"
+          }
         },
-        "editor.formatOnSave": true,
-        "files.watcherExclude": {
-          "**/target/**": true,
-          "**/.git/objects/**": true
-        },
-        "search.exclude": {
-          "**/target/**": true,
-          "**/.git/objects/**": true
-        },
-        "rust-analyzer.check.command": "clippy",
-        "rust-analyzer.cargo.targetDir": true
+        "rust-analyzer.cargo.buildScripts.enable": true,
+        "rust-analyzer.check.command": "check"
       },
       "extensions": [
         "rust-lang.rust-analyzer",
-        "tamasfe.even-better-toml",
-        "vadimcn.vscode-lldb"
+        "tamasfe.even-better-toml"
       ]
     }
-  },
-  "postCreateCommand": "sudo mkdir -p /workspace/codex-rs/target && sudo chown -R ubuntu:ubuntu /workspace/codex-rs/target && rustc --version && cargo --version && pkg-config --libs --cflags libcap"
+  }
 }

@@ -3,11 +3,30 @@ services:
     build:
       context: ..
       dockerfile: .devcontainer/Dockerfile
+
+    container_name: codex-local-llm-dev
+    hostname: codex
+
     command: sleep infinity
     working_dir: /workspace
-    volumes:
-      - ..:/workspace:cached
-    environment:
-      RUST_BACKTRACE: "1"
-      CODEX_HOME: /workspace/.codex-local
 
+    env_file:
+      - ${HOME}/.config/codex-local/envs/dgx-vllm/codex.env
+
+    environment:
+      CODEX_HOME: /home/ubuntu/.codex-local
+      RUST_BACKTRACE: "1"
+      TZ: UTC
+      LANG: C.UTF-8
+      LC_ALL: C.UTF-8
+      LC_TIME: C.UTF-8
+
+    volumes:
+      - ..:/workspace
+      - ${HOME}/.config/codex-local/envs/dgx-vllm/codex-home:/home/ubuntu/.codex-local
+      - ${HOME}/.ssh:/home/ubuntu/.ssh:ro
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/timezone:/etc/timezone:ro
+
+    extra_hosts:
+      - "host.docker.internal:host-gateway"

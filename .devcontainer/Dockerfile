@@ -2,10 +2,23 @@ FROM ubuntu:24.04
 
 ARG DEBIAN_FRONTEND=noninteractive
 
+ENV TZ=UTC
+ENV LANG=C.UTF-8
+ENV LC_ALL=C.UTF-8
+ENV LC_TIME=C.UTF-8
+
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
-      software-properties-common && \
-    add-apt-repository --yes universe
+      software-properties-common \
+      ca-certificates \
+      curl \
+      gnupg && \
+    add-apt-repository --yes universe && \
+    mkdir -p /etc/apt/keyrings && \
+    curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key \
+      | gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg && \
+    echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_20.x nodistro main" \
+      > /etc/apt/sources.list.d/nodesource.list
 
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
@@ -16,41 +29,37 @@ RUN apt-get update && \
       cmake \
       curl \
       file \
+      g++ \
+      gcc \
       git \
+      jq \
       less \
       libcap-dev \
-      libcap2-bin \
       libsqlite3-dev \
       libssl-dev \
-      locales \
       make \
       musl-tools \
-      openssh-client \
       nodejs \
-      npm \
+      openssh-client \
       pkg-config \
       protobuf-compiler \
-      python3 \
       sudo \
+      tzdata \
       unzip \
       vim \
       zlib1g-dev \
       just && \
-    sed -i 's/^# *\(en_US.UTF-8 UTF-8\)/\1/' /etc/locale.gen && \
-    locale-gen && \
+    ln -snf /usr/share/zoneinfo/UTC /etc/localtime && \
+    echo UTC > /etc/timezone && \
     rm -rf /var/lib/apt/lists/*
 
-ENV LANG=en_US.UTF-8
-ENV LC_ALL=en_US.UTF-8
-
-# Ubuntu 24.04 image has user 'ubuntu' with UID 1000.
 RUN echo "ubuntu ALL=(root) NOPASSWD:ALL" > /etc/sudoers.d/ubuntu && \
     chmod 0440 /etc/sudoers.d/ubuntu
 
 USER ubuntu
 
 RUN curl -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal && \
-    ~/.cargo/bin/rustup component add clippy rustfmt
+    /home/ubuntu/.cargo/bin/rustup component add clippy rustfmt
 
 ENV PATH="/home/ubuntu/.cargo/bin:${PATH}"
 
