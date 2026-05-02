@@ -1,0 +1,13 @@
+services:
+  codex-dev:
+    build:
+      context: ..
+      dockerfile: .devcontainer/Dockerfile
+    command: sleep infinity
+    working_dir: /workspace
+    volumes:
+      - ..:/workspace:cached
+    environment:
+      RUST_BACKTRACE: "1"
+      CODEX_HOME: /workspace/.codex-local
+

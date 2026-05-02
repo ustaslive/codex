@@ -1,25 +1,55 @@
 FROM ubuntu:24.04
 
 ARG DEBIAN_FRONTEND=noninteractive
-# enable 'universe' because musl-tools & clang live there
+
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
-    software-properties-common && \
+      software-properties-common && \
     add-apt-repository --yes universe
 
-# now install build deps
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
-    build-essential curl git ca-certificates \
-    pkg-config libcap-dev clang musl-tools libssl-dev just && \
+      bash \
+      build-essential \
+      ca-certificates \
+      clang \
+      cmake \
+      curl \
+      file \
+      git \
+      less \
+      libcap-dev \
+      libcap2-bin \
+      libsqlite3-dev \
+      libssl-dev \
+      locales \
+      make \
+      musl-tools \
+      openssh-client \
+      nodejs \
+      npm \
+      pkg-config \
+      protobuf-compiler \
+      python3 \
+      sudo \
+      unzip \
+      vim \
+      zlib1g-dev \
+      just && \
+    sed -i 's/^# *\(en_US.UTF-8 UTF-8\)/\1/' /etc/locale.gen && \
+    locale-gen && \
     rm -rf /var/lib/apt/lists/*
 
-# Ubuntu 24.04 ships with user 'ubuntu' already created with UID 1000.
+ENV LANG=en_US.UTF-8
+ENV LC_ALL=en_US.UTF-8
+
+# Ubuntu 24.04 image has user 'ubuntu' with UID 1000.
+RUN echo "ubuntu ALL=(root) NOPASSWD:ALL" > /etc/sudoers.d/ubuntu && \
+    chmod 0440 /etc/sudoers.d/ubuntu
+
 USER ubuntu
 
-# install Rust + musl target as dev user
 RUN curl -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal && \
-    ~/.cargo/bin/rustup target add aarch64-unknown-linux-musl && \
     ~/.cargo/bin/rustup component add clippy rustfmt
 
 ENV PATH="/home/ubuntu/.cargo/bin:${PATH}"

@@ -1,27 +1,36 @@
 {
-  "name": "Codex",
-  "build": {
-    "dockerfile": "Dockerfile",
-    "context": "..",
-    "platform": "linux/arm64"
-  },
-
-  /* Force VS Code to run the container as arm64 in
-     case your host is x86 (or vice-versa). */
-  "runArgs": ["--platform=linux/arm64"],
-
-  "containerEnv": {
-    "RUST_BACKTRACE": "1",
-    "CARGO_TARGET_DIR": "${containerWorkspaceFolder}/codex-rs/target-arm64"
-  },
-
+  "name": "Codex Local LLM",
+  "dockerComposeFile": "compose.yaml",
+  "service": "codex-dev",
+  "workspaceFolder": "/workspace",
   "remoteUser": "ubuntu",
+  "shutdownAction": "stopCompose",
+  "overrideCommand": true,
   "customizations": {
     "vscode": {
       "settings": {
-        "terminal.integrated.defaultProfile.linux": "bash"
+        "terminal.integrated.defaultProfile.linux": "bash",
+        "terminal.integrated.env.linux": {
+          "PATH": "/home/ubuntu/.cargo/bin:${env:PATH}"
+        },
+        "editor.formatOnSave": true,
+        "files.watcherExclude": {
+          "**/target/**": true,
+          "**/.git/objects/**": true
+        },
+        "search.exclude": {
+          "**/target/**": true,
+          "**/.git/objects/**": true
+        },
+        "rust-analyzer.check.command": "clippy",
+        "rust-analyzer.cargo.targetDir": true
       },
-      "extensions": ["rust-lang.rust-analyzer", "tamasfe.even-better-toml"]
+      "extensions": [
+        "rust-lang.rust-analyzer",
+        "tamasfe.even-better-toml",
+        "vadimcn.vscode-lldb"
+      ]
     }
-  }
+  },
+  "postCreateCommand": "sudo mkdir -p /workspace/codex-rs/target && sudo chown -R ubuntu:ubuntu /workspace/codex-rs/target && rustc --version && cargo --version && pkg-config --libs --cflags libcap"
 }
