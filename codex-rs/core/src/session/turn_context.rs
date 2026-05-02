@@ -735,8 +735,7 @@ impl Session {
         turn_context
     }
 
-    pub(crate) async fn maybe_emit_unknown_model_warning_for_turn(&self, _tc: &TurnContext) {
-    }
+    pub(crate) async fn maybe_emit_unknown_model_warning_for_turn(&self, _tc: &TurnContext) {}
 
     pub(crate) async fn new_default_turn(&self) -> Arc<TurnContext> {
         self.new_default_turn_with_sub_id(self.next_internal_sub_id())

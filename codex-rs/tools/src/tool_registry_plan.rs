@@ -1,8 +1,6 @@
 use crate::CommandToolOptions;
 use crate::REQUEST_PLUGIN_INSTALL_TOOL_NAME;
 use crate::REQUEST_USER_INPUT_TOOL_NAME;
-use crate::ResponsesApiNamespace;
-use crate::ResponsesApiNamespaceTool;
 use crate::ShellToolOptions;
 use crate::SpawnAgentToolOptions;
 use crate::TOOL_SEARCH_DEFAULT_LIMIT;
@@ -59,7 +57,6 @@ use crate::create_wait_agent_tool_v2;
 use crate::create_wait_tool;
 use crate::create_web_search_tool;
 use crate::create_write_stdin_tool;
-use crate::default_namespace_description;
 use crate::dynamic_tool_to_loadable_tool_spec;
 use crate::mcp_tool_to_responses_api_tool;
 use crate::request_permissions_tool_description;
@@ -514,62 +511,25 @@ pub fn build_tool_registry_plan(
     if let Some(mcp_tools) = params.mcp_tools {
         let mut entries = mcp_tools.to_vec();
         entries.sort_by_key(|tool| tool.name.display());
-        let mut namespace_entries = BTreeMap::new();
 
         for tool in entries {
-            let Some(namespace) = tool.name.namespace.as_ref() else {
-                let tool_name = &tool.name;
-                tracing::error!("Skipping MCP tool `{tool_name}`: MCP tools must be namespaced");
-                continue;
-            };
-            namespace_entries
-                .entry(namespace.clone())
-                .or_insert_with(Vec::new)
-                .push(tool);
-        }
+            let flattened_tool_name = ToolName::plain(tool.name.display());
 
-        for (namespace, mut entries) in namespace_entries {
-            entries.sort_by_key(|tool| tool.name.name.clone());
-            let tool_namespace = params
-                .tool_namespaces
-                .and_then(|namespaces| namespaces.get(&namespace));
-            let description = tool_namespace
-                .and_then(|namespace| namespace.description.as_deref())
-                .map(str::trim)
-                .filter(|description| !description.is_empty())
-                .map(str::to_string)
-                .unwrap_or_else(|| {
-                    let namespace_name = tool_namespace
-                        .map(|namespace| namespace.name.as_str())
-                        .unwrap_or(namespace.as_str());
-                    default_namespace_description(namespace_name)
-                });
-            let mut tools = Vec::new();
-            for tool in entries {
-                match mcp_tool_to_responses_api_tool(&tool.name, tool.tool) {
-                    Ok(converted_tool) => {
-                        tools.push(ResponsesApiNamespaceTool::Function(converted_tool));
-                        plan.register_handler(tool.name, ToolHandlerKind::Mcp);
-                    }
-                    Err(error) => {
-                        let tool_name = &tool.name;
-                        tracing::error!(
-                            "Failed to convert `{tool_name}` MCP tool to OpenAI tool: {error:?}"
-                        );
-                    }
+            match mcp_tool_to_responses_api_tool(&flattened_tool_name, tool.tool) {
+                Ok(converted_tool) => {
+                    plan.push_spec(
+                        ToolSpec::Function(converted_tool),
+                        /*supports_parallel_tool_calls*/ false,
+                        config.code_mode_enabled,
+                    );
+                    plan.register_handler(tool.name, ToolHandlerKind::Mcp);
                 }
-            }
-
-            if !tools.is_empty() {
-                plan.push_spec(
-                    ToolSpec::Namespace(ResponsesApiNamespace {
-                        name: namespace,
-                        description,
-                        tools,
-                    }),
-                    /*supports_parallel_tool_calls*/ false,
-                    config.code_mode_enabled,
-                );
+                Err(error) => {
+                    let tool_name = &tool.name;
+                    tracing::error!(
+                        "Failed to convert `{tool_name}` MCP tool to OpenAI tool: {error:?}"
+                    );
+                }
             }
         }
     }
