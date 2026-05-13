@@ -1,27 +1,38 @@
 {
-  "name": "Codex",
-  "build": {
-    "dockerfile": "Dockerfile",
-    "context": "..",
-    "platform": "linux/arm64"
-  },
-
-  /* Force VS Code to run the container as arm64 in
-     case your host is x86 (or vice-versa). */
-  "runArgs": ["--platform=linux/arm64"],
-
-  "containerEnv": {
-    "RUST_BACKTRACE": "1",
-    "CARGO_TARGET_DIR": "${containerWorkspaceFolder}/codex-rs/target-arm64"
-  },
-
+  "name": "Codex Local LLM",
+  "dockerComposeFile": "compose.yaml",
+  "service": "codex-dev",
+  "workspaceFolder": "/workspace",
   "remoteUser": "ubuntu",
+  "shutdownAction": "stopCompose",
+  "updateRemoteUserUID": true,
+
+  "remoteEnv": {
+    "CODEX_HOME": "/home/ubuntu/.codex-local",
+    "LANG": "C.UTF-8",
+    "LC_ALL": "C.UTF-8",
+    "LC_TIME": "C.UTF-8",
+    "TZ": "UTC"
+  },
+
+  "postCreateCommand": "rustc --version && cargo --version && node --version && npm --version && npx --version && pkg-config --libs --cflags libcap && echo CODEX_HOME=$CODEX_HOME",
+
   "customizations": {
     "vscode": {
       "settings": {
-        "terminal.integrated.defaultProfile.linux": "bash"
+        "terminal.integrated.defaultProfile.linux": "bash",
+        "terminal.integrated.profiles.linux": {
+          "bash": {
+            "path": "/bin/bash"
+          }
+        },
+        "rust-analyzer.cargo.buildScripts.enable": true,
+        "rust-analyzer.check.command": "check"
       },
-      "extensions": ["rust-lang.rust-analyzer", "tamasfe.even-better-toml"]
+      "extensions": [
+        "rust-lang.rust-analyzer",
+        "tamasfe.even-better-toml"
+      ]
     }
   }
 }

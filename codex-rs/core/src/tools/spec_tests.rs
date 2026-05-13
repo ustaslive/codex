@@ -19,7 +19,6 @@ use codex_protocol::protocol::SessionSource;
 use codex_tools::DiscoverableTool;
 use codex_tools::JsonSchema;
 use codex_tools::REQUEST_PLUGIN_INSTALL_TOOL_NAME;
-use codex_tools::ResponsesApiNamespaceTool;
 use codex_tools::ResponsesApiTool;
 use codex_tools::ShellCommandBackendConfig;
 use codex_tools::TOOL_SEARCH_TOOL_NAME;
@@ -197,23 +196,12 @@ fn find_tool<'a>(tools: &'a [ToolSpec], expected_name: &str) -> &'a ToolSpec {
         .unwrap_or_else(|| panic!("expected tool {expected_name}"))
 }
 
-fn find_namespace_function_tool<'a>(
-    tools: &'a [ToolSpec],
-    expected_namespace: &str,
-    expected_name: &str,
-) -> &'a ResponsesApiTool {
-    let namespace_tool = find_tool(tools, expected_namespace);
-    let ToolSpec::Namespace(namespace) = namespace_tool else {
-        panic!("expected namespace tool {expected_namespace}");
+fn find_function_tool<'a>(tools: &'a [ToolSpec], expected_name: &str) -> &'a ResponsesApiTool {
+    let tool = find_tool(tools, expected_name);
+    let ToolSpec::Function(tool) = tool else {
+        panic!("expected function tool {expected_name}");
     };
-    namespace
-        .tools
-        .iter()
-        .find_map(|tool| match tool {
-            ResponsesApiNamespaceTool::Function(tool) if tool.name == expected_name => Some(tool),
-            _ => None,
-        })
-        .unwrap_or_else(|| panic!("expected tool {expected_namespace}{expected_name} in namespace"))
+    tool
 }
 
 async fn multi_agent_v2_tools_config() -> ToolsConfig {
@@ -979,7 +967,7 @@ async fn search_tool_registers_namespaced_mcp_tool_aliases() {
 }
 
 #[tokio::test]
-async fn direct_mcp_tools_register_namespaced_handlers() {
+async fn direct_mcp_tools_register_flat_handlers() {
     let config = test_config().await;
     let model_info = construct_model_info_offline("gpt-5.4", &config);
     let mut features = Features::with_defaults();
@@ -1008,8 +996,8 @@ async fn direct_mcp_tools_register_namespaced_handlers() {
     )
     .build();
 
-    assert!(registry.has_handler(&ToolName::namespaced("mcp__test_server__", "echo")));
-    assert!(!registry.has_handler(&ToolName::plain("mcp__test_server__echo")));
+    assert!(registry.has_handler(&ToolName::plain("mcp__test_server__echo")));
+    assert!(!registry.has_handler(&ToolName::namespaced("mcp__test_server__", "echo")));
 }
 
 #[tokio::test]
@@ -1050,11 +1038,11 @@ async fn test_mcp_tool_property_missing_type_defaults_to_string() {
     )
     .build();
 
-    let tool = find_namespace_function_tool(&tools, "dash/", "search");
+    let tool = find_function_tool(&tools, "dash/search");
     assert_eq!(
         *tool,
         ResponsesApiTool {
-            name: "search".to_string(),
+            name: "dash/search".to_string(),
             parameters: JsonSchema::object(
                 /*properties*/
                 BTreeMap::from([(
@@ -1108,11 +1096,11 @@ async fn test_mcp_tool_preserves_integer_schema() {
     )
     .build();
 
-    let tool = find_namespace_function_tool(&tools, "dash/", "paginate");
+    let tool = find_function_tool(&tools, "dash/paginate");
     assert_eq!(
         *tool,
         ResponsesApiTool {
-            name: "paginate".to_string(),
+            name: "dash/paginate".to_string(),
             parameters: JsonSchema::object(
                 /*properties*/
                 BTreeMap::from([(
@@ -1167,11 +1155,11 @@ async fn test_mcp_tool_array_without_items_gets_default_string_items() {
     )
     .build();
 
-    let tool = find_namespace_function_tool(&tools, "dash/", "tags");
+    let tool = find_function_tool(&tools, "dash/tags");
     assert_eq!(
         *tool,
         ResponsesApiTool {
-            name: "tags".to_string(),
+            name: "dash/tags".to_string(),
             parameters: JsonSchema::object(
                 /*properties*/
                 BTreeMap::from([(
@@ -1230,11 +1218,11 @@ async fn test_mcp_tool_anyof_defaults_to_string() {
     )
     .build();
 
-    let tool = find_namespace_function_tool(&tools, "dash/", "value");
+    let tool = find_function_tool(&tools, "dash/value");
     assert_eq!(
         *tool,
         ResponsesApiTool {
-            name: "value".to_string(),
+            name: "dash/value".to_string(),
             parameters: JsonSchema::object(
                 /*properties*/
                 BTreeMap::from([(
@@ -1312,11 +1300,11 @@ async fn test_get_openai_tools_mcp_tools_with_additional_properties_schema() {
     )
     .build();
 
-    let tool = find_namespace_function_tool(&tools, "test_server/", "do_something_cool");
+    let tool = find_function_tool(&tools, "test_server/do_something_cool");
     assert_eq!(
         *tool,
         ResponsesApiTool {
-            name: "do_something_cool".to_string(),
+            name: "test_server/do_something_cool".to_string(),
             parameters: JsonSchema::object(
                 /*properties*/
                 BTreeMap::from([

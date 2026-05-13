@@ -23,16 +23,18 @@ fn search_info_uses_mcp_tool_metadata_and_parameter_names() {
 }
 
 #[test]
-fn search_info_uses_connector_name_for_output_namespace_description() {
+fn search_info_returns_flat_function_tool_output() {
     let mut tool_info = tool_info();
     tool_info.namespace_description = None;
     let handler = McpHandler::new(tool_info);
     let search_info = handler.search_info().expect("MCP search info");
 
-    let LoadableToolSpec::Namespace(namespace) = search_info.entry.output else {
-        panic!("expected namespace search output");
+    let LoadableToolSpec::Function(tool) = search_info.entry.output else {
+        panic!("expected function search output");
     };
-    assert_eq!(namespace.description, "Tools for working with Calendar.");
+    assert_eq!(tool.name, "mcp__calendar___create_event");
+    assert_eq!(tool.description, "Create a calendar event.");
+    assert_eq!(tool.defer_loading, Some(true));
     assert_eq!(
         search_info.source_info,
         Some(ToolSearchSourceInfo {

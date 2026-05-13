@@ -18,8 +18,6 @@ use crate::tools::registry::ToolHandler;
 use crate::tools::registry::ToolTelemetryTags;
 use crate::tools::tool_search_entry::ToolSearchInfo;
 use codex_mcp::ToolInfo;
-use codex_tools::ResponsesApiNamespace;
-use codex_tools::ResponsesApiNamespaceTool;
 use codex_tools::ToolName;
 use codex_tools::ToolSearchSourceInfo;
 use codex_tools::ToolSpec;
@@ -49,35 +47,13 @@ impl ToolExecutor<ToolInvocation> for McpHandler {
     type Output = McpToolOutput;
 
     fn tool_name(&self) -> ToolName {
-        self.tool_info.canonical_tool_name()
+        ToolName::plain(self.tool_info.canonical_tool_name().to_string())
     }
 
     fn spec(&self) -> Option<ToolSpec> {
         let tool_name = self.tool_name();
-        let namespace_name = tool_name.namespace.as_ref()?;
         let tool = mcp_tool_to_responses_api_tool(&tool_name, &self.tool_info.tool).ok()?;
-        let description = self
-            .tool_info
-            .namespace_description
-            .as_deref()
-            .map(str::trim)
-            .filter(|description| !description.is_empty())
-            .map(str::to_string)
-            .or_else(|| {
-                self.tool_info
-                    .connector_name
-                    .as_deref()
-                    .map(str::trim)
-                    .filter(|connector_name| !connector_name.is_empty())
-                    .map(|connector_name| format!("Tools for working with {connector_name}."))
-            })
-            .unwrap_or_default();
-
-        Some(ToolSpec::Namespace(ResponsesApiNamespace {
-            name: namespace_name.clone(),
-            description,
-            tools: vec![ResponsesApiNamespaceTool::Function(tool)],
-        }))
+        Some(ToolSpec::Function(tool))
     }
 
     fn exposure(&self) -> ToolExposure {

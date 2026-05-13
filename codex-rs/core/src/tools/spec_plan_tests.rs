@@ -1358,11 +1358,11 @@ fn test_build_specs_mcp_tools_converted() {
         &[],
     );
 
-    let tool = find_namespace_function_tool(&tools, "test_server/", "do_something_cool");
+    let tool = find_function_tool(&tools, "test_server/do_something_cool");
     assert_eq!(
         tool,
         &ResponsesApiTool {
-            name: "do_something_cool".to_string(),
+            name: "test_server/do_something_cool".to_string(),
             parameters: JsonSchema::object(
                 BTreeMap::from([
                     (
@@ -1433,7 +1433,12 @@ fn namespace_specs_are_hidden_when_namespace_tools_are_disabled() {
     );
 
     assert_lacks_tool_name(&tools, "mcp__sample__");
-    assert!(registry.has_handler(&ToolName::namespaced("mcp__sample__", "echo")));
+    assert!(matches!(
+        find_tool(&tools, "mcp__sample__echo"),
+        ToolSpec::Function(_)
+    ));
+    assert!(registry.has_handler(&ToolName::plain("mcp__sample__echo")));
+    assert!(!registry.has_handler(&ToolName::namespaced("mcp__sample__", "echo")));
 }
 
 #[test]
@@ -1510,14 +1515,8 @@ fn test_build_specs_mcp_namespace_description_falls_back_when_missing() {
         &[],
     );
 
-    let namespace_tool = find_tool(&tools, "test_server/");
-    let ToolSpec::Namespace(namespace) = namespace_tool else {
-        panic!("expected namespace tool");
-    };
-    assert_eq!(
-        namespace.description,
-        "Tools in the test_server/ namespace."
-    );
+    let tool = find_function_tool(&tools, "test_server/do_something_cool");
+    assert_eq!(tool.description, "Do something cool");
 }
 
 #[test]
@@ -1560,11 +1559,11 @@ fn test_build_specs_mcp_tools_sorted_by_name() {
     );
 
     assert_eq!(
-        namespace_function_names(&tools, "test_server/"),
+        function_tool_names_with_prefix(&tools, "test_server/"),
         vec![
-            "cool".to_string(),
-            "do".to_string(),
-            "something".to_string(),
+            "test_server/cool".to_string(),
+            "test_server/do".to_string(),
+            "test_server/something".to_string(),
         ]
     );
 }
@@ -2102,8 +2101,7 @@ fn code_mode_augments_mcp_tool_descriptions_with_namespaced_sample() {
         &[],
     );
 
-    let ResponsesApiTool { description, .. } =
-        find_namespace_function_tool(&tools, "mcp__sample__", "echo");
+    let ResponsesApiTool { description, .. } = find_function_tool(&tools, "mcp__sample__echo");
 
     assert_eq!(
         description,
@@ -2188,8 +2186,7 @@ fn code_mode_preserves_nullable_and_literal_mcp_input_shapes() {
         &[],
     );
 
-    let ResponsesApiTool { description, .. } =
-        find_namespace_function_tool(&tools, "mcp__sample__", "fn");
+    let ResponsesApiTool { description, .. } = find_function_tool(&tools, "mcp__sample__fn");
 
     assert!(description.contains(
         r#"exec tool declaration:
@@ -2530,8 +2527,7 @@ fn code_mode_augments_mcp_tool_descriptions_with_structured_output_sample() {
         &[],
     );
 
-    let ResponsesApiTool { description, .. } =
-        find_namespace_function_tool(&tools, "mcp__sample__", "echo");
+    let ResponsesApiTool { description, .. } = find_function_tool(&tools, "mcp__sample__echo");
 
     assert_eq!(
         description,
@@ -2648,6 +2644,14 @@ fn find_tool<'a>(tools: &'a [ToolSpec], expected_name: &str) -> &'a ToolSpec {
         .unwrap_or_else(|| panic!("expected tool {expected_name}"))
 }
 
+fn find_function_tool<'a>(tools: &'a [ToolSpec], expected_name: &str) -> &'a ResponsesApiTool {
+    let tool = find_tool(tools, expected_name);
+    let ToolSpec::Function(tool) = tool else {
+        panic!("expected function tool {expected_name}");
+    };
+    tool
+}
+
 fn assert_process_tool_environment_id(
     tools: &[ToolSpec],
     expected_name: &str,
@@ -2677,35 +2681,14 @@ fn assert_apply_patch_environment_id(tools: &[ToolSpec], expected_present: bool)
     );
 }
 
-fn find_namespace_function_tool<'a>(
-    tools: &'a [ToolSpec],
-    expected_namespace: &str,
-    expected_name: &str,
-) -> &'a ResponsesApiTool {
-    let namespace_tool = find_tool(tools, expected_namespace);
-    let ToolSpec::Namespace(namespace) = namespace_tool else {
-        panic!("expected namespace tool {expected_namespace}");
-    };
-    namespace
-        .tools
+fn function_tool_names_with_prefix(tools: &[ToolSpec], expected_prefix: &str) -> Vec<String> {
+    tools
         .iter()
-        .find_map(|tool| match tool {
-            ResponsesApiNamespaceTool::Function(tool) if tool.name == expected_name => Some(tool),
+        .filter_map(|tool| match tool {
+            ToolSpec::Function(tool) if tool.name.starts_with(expected_prefix) => {
+                Some(tool.name.clone())
+            }
             _ => None,
-        })
-        .unwrap_or_else(|| panic!("expected tool {expected_namespace}{expected_name} in namespace"))
-}
-
-fn namespace_function_names(tools: &[ToolSpec], expected_namespace: &str) -> Vec<String> {
-    let namespace_tool = find_tool(tools, expected_namespace);
-    let ToolSpec::Namespace(namespace) = namespace_tool else {
-        panic!("expected namespace tool {expected_namespace}");
-    };
-    namespace
-        .tools
-        .iter()
-        .map(|tool| match tool {
-            ResponsesApiNamespaceTool::Function(tool) => tool.name.clone(),
         })
         .collect()
 }
